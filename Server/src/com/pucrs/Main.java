@@ -5,6 +5,9 @@ import java.io.IOException;
 
 public class Main {
     public static void main(String args[]) throws IOException {
-        new NameNodeServer().start();
+        if(args[0].equals("supernode"))
+            new NameNodeServer().start();
+        else
+            new ClientNodeServer().start();
     }
 }
