@@ -1,36 +1,28 @@
 package com.pucrs;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
+import java.util.HashMap;
 
-public class Node implements Runnable {
+public class Node {
     Socket socket;
     PrintWriter out;
     BufferedReader in;
+    ObjectInputStream is;
+    ObjectOutputStream os;
     public Node(Socket socket) throws IOException {
         this.socket = socket;
         this.out = new PrintWriter(socket.getOutputStream(), true);
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        this.is = new ObjectInputStream(socket.getInputStream());
+        this.os = new ObjectOutputStream(socket.getOutputStream());
     }
 
-    @Override
-    public void run() {
-        System.out.println("Connected: " + this);
-        int i = 0;
-        while (true) {
-            try {
-                Thread.sleep(1000);
-                this.out.println("" +(i++));
-                System.out.println("still: " + this);
-
-            } catch (Exception e){
-                e.printStackTrace();
-            }
-        }
+    // <MD5, file_name>
+    public HashMap<String, String> receiveFileData() throws IOException, ClassNotFoundException {
+        return (HashMap<String,String>) is.readObject();
     }
+
 
 
     @Override
