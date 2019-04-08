@@ -1,6 +1,6 @@
 package com.pucrs;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,7 +21,7 @@ public class NameNodeServer {
         socket.setLoopbackMode(true);
 
         this.nodes = new ArrayList<>();
-        this.bufferMulticastReceiver = new byte[1024];
+        this.bufferMulticastReceiver = new byte[1024 * 4];
         this.group = InetAddress.getByName("224.0.0.0");
 
         this.files = new HashMap<>();
@@ -85,6 +85,10 @@ public class NameNodeServer {
         while (true) {
             DatagramPacket packet = new DatagramPacket(bufferMulticastReceiver, bufferMulticastReceiver.length);
             socket.receive(packet);
+
+            ByteArrayInputStream bais = new ByteArrayInputStream(bufferMulticastReceiver);
+            ObjectInputStream ois = new ObjectInputStream(bais);
+
             String received = new String(
                     packet.getData(), 0, packet.getLength());
 
@@ -111,11 +115,15 @@ public class NameNodeServer {
         }
     }
 
-    public void multicast(String multicastMessage) throws IOException {
-        bufferMulticastPublisher = multicastMessage.getBytes();
+    public void multicast(Object multicastMessage) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(multicastMessage);
+        byte[] data = baos.toByteArray();
+
         DatagramPacket packet = new DatagramPacket(
-                bufferMulticastPublisher,
-                bufferMulticastPublisher.length,
+                data,
+                data.length,
                 group,
                 4446);
 

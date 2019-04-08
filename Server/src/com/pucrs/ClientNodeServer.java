@@ -24,7 +24,7 @@ public class ClientNodeServer {
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             
             registerFiles(socket);
-            listenServer(reader);
+//            listenServer(reader);
 
 
 
@@ -50,7 +50,6 @@ public class ClientNodeServer {
 
         ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
         os.writeObject(files);
-//        os.close();
     }
 
     public void listenServer(BufferedReader reader) {
