@@ -15,7 +15,7 @@ public class FileData {
         this.ip = ip;
     }
 
-    public FileData(String md5, String name,  String ip, String toIp) {
+    public FileData(String md5, String name, String ip, String toIp) {
         this.md5 = md5;
         this.name = name;
         this.toIp = toIp;

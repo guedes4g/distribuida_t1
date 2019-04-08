@@ -10,23 +10,21 @@ import java.util.HashMap;
 
 public class ClientNodeServer {
     HashMap<String, String> files;
+    private String hostname;
+    private int port;
 
-    ClientNodeServer() {
+    ClientNodeServer(String hostname, int port) {
+        this.hostname = hostname;
+        this.port = port;
         files = new HashMap<>();
     }
 
     public void start() {
-        String hostname = "127.0.0.1";
-        int port = 3333;
-
         try (Socket socket = new Socket(hostname, port)) {
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-            
             registerFiles(socket);
 //            listenServer(reader);
-
-
 
         } catch (UnknownHostException ex) {
             System.out.println("Server not found: " + ex.getMessage());

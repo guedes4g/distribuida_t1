@@ -8,6 +8,7 @@ public class Main {
         if(args[0].equals("supernode"))
             new NameNodeServer().start();
         else
-            new ClientNodeServer().start();
+            new ClientNodeServer(args[1],
+                    Integer.parseInt(args[2])).start();
     }
 }
