@@ -19,9 +19,9 @@ public class SuperNode {
 
     private HashMap<String, List<FileData>> files;
     
-    public SuperNode() throws IOException {
-        this.server = new ServerSocket(3333);
-        this.socket = new MulticastSocket(4446);
+    public SuperNode(int unicastPort, int multicastPort) throws IOException {
+        this.server = new ServerSocket(unicastPort);
+        this.socket = new MulticastSocket(multicastPort);
         
         //Previne loopback na mesma maquina
         socket.setLoopbackMode(true);
