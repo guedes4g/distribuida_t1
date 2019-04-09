@@ -120,11 +120,10 @@ public class ClientNode {
 
     private void send(Client2Super obj) {
         try {
-            //ObjectOutputStream os = new ObjectOutputStream(this.supernode.getOutputStream());
             this.superNodeOS.writeObject(obj);
         }
         catch (IOException ex) {
-            ex.printStackTrace();
+            Terminal.debug("ClientNode - send - IOException: " + ex.getMessage());
         }
     }
 
