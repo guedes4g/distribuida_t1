@@ -1,7 +1,9 @@
 package com.pucrs.br.distribuida.t1.server;
 
+import com.pucrs.br.distribuida.t1.dto.Client2Super;
 import com.pucrs.br.distribuida.t1.entity.FileData;
 import com.pucrs.br.distribuida.t1.entity.Node;
+import com.pucrs.br.distribuida.t1.helper.Terminal;
 
 import java.io.*;
 import java.net.*;
@@ -11,47 +13,107 @@ import java.util.List;
 
 public class SuperNode {
     private ServerSocket server;
-    private ArrayList<Node> nodes;
     private byte[] bufferMulticastReceiver;
     private byte[] bufferMulticastPublisher;
     private InetAddress group;
     private MulticastSocket socket;
 
-    private HashMap<String, List<FileData>> files;
+    private HashMap<String, Node> nodes;
+    private HashMap<Integer, List<FileData>> files;
     
     public SuperNode(int unicastPort, int multicastPort) throws IOException {
+        Terminal.debug("Initiating unicast socket with nodes on port '"+unicastPort+"'");
         this.server = new ServerSocket(unicastPort);
+
+        Terminal.debug("Initiating multicast socket with supernodes on port '"+multicastPort+"'");
         this.socket = new MulticastSocket(multicastPort);
         
         //Previne loopback na mesma maquina
         socket.setLoopbackMode(true);
 
-        this.nodes = new ArrayList<>();
         this.bufferMulticastReceiver = new byte[1024 * 4];
         this.group = InetAddress.getByName("224.0.0.1");
 
+        this.nodes = new HashMap<>();
         this.files = new HashMap<>();
     }
     
-    private void handleNodeConnection() {
+    private void handleClientNodesRequests() {
         try {
-            Socket cliente = server.accept();
-            Node node = new Node(cliente);
+            //accept new connection
+            Terminal.debug("Waiting for connections on unicast socket (client nodes).");
+            Socket socket = server.accept();
 
-            //add server into server's list
-            this.nodes.add(node);
-            
-            //get files from server and insert in the hash map
-            files.put(node.getIpAddress(), node.getFiles());
-        } catch (IOException | ClassNotFoundException e){
+            //get node
+            Node node = this.getNode(socket);
+            Terminal.debug("A connection has been made with '"+node+"'.");
+
+            //handle this client request
+            this.handleClientRequest(node);
+
+        }
+        catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
+    }
+
+    private Node getNode(Socket socket) throws IOException {
+        Node node = null;
+        String ipAddress = socket.getInetAddress().getHostAddress();
+
+        if (!this.nodes.containsKey(ipAddress))
+            this.nodes.put(ipAddress, new Node(this.nodes.size()));
+
+        //get the node
+        node = this.nodes.get(ipAddress);
+
+        //update the socket
+        node.updateSocket(socket);
+
+
+        return node;
+    }
+
+    private void handleClientRequest(Node node) throws IOException, ClassNotFoundException {
+        Client2Super req = node.getRequest();
+
+        switch (req.getCommand()) {
+            case 1:
+                Terminal.debug("Node '"+node+"' sent his list of files.");
+                this.handleNodeListOfFiles(node, req.getUploadFilesList());
+                break;
+
+            case 2: //PING
+                Terminal.debug("Ping is being made by '"+node+"'.");
+                node.updateLastPingTime();
+                break;
+
+            case 3:
+                Terminal.debug("Node '"+node+"' is requesting list of files in network.");
+                this.handleSendListOfFilesInNetwork(node);
+                break;
+        }
+    }
+
+    private void handleSendListOfFilesInNetwork(Node node) {
+        List<FileData> list = new ArrayList<>();
+
+        //Create a list containing all files in other servers (removing it's own)
+        this.files.forEach((key, files) -> {
+            if (node.getId() != (key))
+                list.addAll(files);
+        });
+    }
+
+    private void handleNodeListOfFiles(Node node, HashMap<String, String> uploadFilesList) {
+        //get files from server and insert in the hash map
+        files.put(node.getId(), node.getFiles(uploadFilesList));
     }
 
     public void start() {
         new Thread(() -> {
             while (true)
-                this.handleNodeConnection();
+                this.handleClientNodesRequests();
         }).start();
 //        int i = 0;
 //

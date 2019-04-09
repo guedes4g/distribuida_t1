@@ -3,6 +3,8 @@ package com.pucrs.br.distribuida.t1.helper;
 import java.util.Scanner;
 
 public class Terminal {
+    public final static boolean debug = true;
+
     public static int getInt() {
         Scanner s = new Scanner(System.in);
         
@@ -13,5 +15,10 @@ public class Terminal {
         System.out.println(message);
         
         return getInt();
+    }
+
+    public static void debug(Object message) {
+        if (debug)
+            System.out.println(message);
     }
 }

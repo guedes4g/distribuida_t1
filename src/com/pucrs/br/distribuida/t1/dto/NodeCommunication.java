@@ -1,6 +1,8 @@
 package com.pucrs.br.distribuida.t1.dto;
 
-public abstract class NodeCommunication {
+import java.io.Serializable;
+
+public abstract class NodeCommunication implements Serializable {
     protected int command;
     protected Object body;
 
