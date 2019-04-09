@@ -1,6 +1,5 @@
 package com.pucrs;
 
-
 import java.io.IOException;
 
 public class Main {
