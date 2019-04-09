@@ -5,7 +5,6 @@ public class FileData {
     private String name;
     private String ip;
 
-
     // The node that requested the file
     private String toIp;
 

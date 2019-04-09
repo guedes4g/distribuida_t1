@@ -1,30 +1,40 @@
 package com.pucrs;
 
 import java.io.*;
-import java.math.BigInteger;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 
 public class ClientNodeServer {
-    HashMap<String, String> files;
+    private HashMap<String, String> files;
     private String hostname;
     private int port;
+    
+    private Socket supernode;
 
     ClientNodeServer(String hostname, int port) {
         this.hostname = hostname;
         this.port = port;
-        files = new HashMap<>();
+        
+        this.files = new HashMap<>();
+        
+        
+        
+        //get files from my computer
+        this.registerFiles();
     }
 
     public void start() {
-        try (Socket socket = new Socket(hostname, port)) {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-            registerFiles(socket);
-//            listenServer(reader);
+        try {
+            supernode = new Socket(hostname, port);
+                    
+            BufferedReader reader = new BufferedReader(new InputStreamReader(supernode.getInputStream()));
+            PrintWriter writer = new PrintWriter(supernode.getOutputStream(), true);
+            
+            //send the files to super node
+            this.sendRegisteredFiles(supernode);
+            
+            this.startUI();
 
         } catch (UnknownHostException ex) {
             System.out.println("Server not found: " + ex.getMessage());
@@ -32,22 +42,45 @@ public class ClientNodeServer {
             System.out.println("I/O error: " + ex.getMessage());
         }
     }
-    private void registerFiles(Socket socket) throws IOException {
+    
+    private void startUI() {
+        while (true) {
+            System.out.println("Hi! What you want to do?");
+            System.out.println("[0] get files list.");
+            System.out.println("[99] exit.");
+            
+            int option = Terminal.getInt();
+            
+            switch (option) {
+                case 1:
+                    this.getFilesFromSuperNode();
+                case 99:
+                    return;
+            }
+        }
+        
+    }
+    
+    private void getFilesFromSuperNode() {
+        
+    }
+    
+    private void registerFiles()  {
         File folder = new File("./Server/Folder");
         File[] listOfFiles = folder.listFiles();
-        System.out.println(folder.isDirectory() +" | "+ folder.isFile());
-        System.out.println(listOfFiles);
+        
         if(listOfFiles != null)
-            for (int i = 0; i < listOfFiles.length; i++) {
-                if (listOfFiles[i].isFile()) {
-                    String fileName = listOfFiles[i].getName();
-                    String md5 = generateMD5(fileName);
-                    files.put(md5, fileName);
+            for (File file : listOfFiles)
+                if (file.isFile()) {
+                    String fileName = file.getName();
+                    String md5 = Md5.generate(file.getAbsolutePath());
+                    this.files.put(md5, fileName);
                 }
-            }
-
+    }
+    
+    private void sendRegisteredFiles(Socket socket) throws IOException {
         ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
-        os.writeObject(files);
+        os.writeObject(this.files);
     }
 
     public void listenServer(BufferedReader reader) {
@@ -60,22 +93,4 @@ public class ClientNodeServer {
             }
         }
     }
-
-    public String generateMD5(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] messageDigest = md.digest(input.getBytes());
-            BigInteger no = new BigInteger(1, messageDigest);
-            String hashtext = no.toString(16);
-            while (hashtext.length() < 32) {
-                hashtext = "0" + hashtext;
-            }
-            return hashtext;
-        }
-        catch (NoSuchAlgorithmException e) {
-           e.printStackTrace();
-        }
-        return null;
-    }
-
 }

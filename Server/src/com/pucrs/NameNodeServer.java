@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class NameNodeServer {
     private ServerSocket server;
@@ -13,41 +14,41 @@ public class NameNodeServer {
     private InetAddress group;
     private MulticastSocket socket;
 
-    private HashMap<String, ArrayList<FileData>> files;
+    private HashMap<String, List<FileData>> files;
+    
     public NameNodeServer() throws IOException {
         this.server = new ServerSocket(3333);
         this.socket = new MulticastSocket(4446);
+        
         //Previne loopback na mesma maquina
         socket.setLoopbackMode(true);
 
         this.nodes = new ArrayList<>();
         this.bufferMulticastReceiver = new byte[1024 * 4];
-        this.group = InetAddress.getByName("224.0.0.0");
+        this.group = InetAddress.getByName("224.0.0.1");
 
         this.files = new HashMap<>();
+    }
+    
+    private void handleNodeConnection() {
+        try {
+            Socket cliente = server.accept();
+            Node node = new Node(cliente);
+
+            //add node into node's list
+            this.nodes.add(node);
+            
+            //get files from node and insert in the hash map 
+            files.put(node.getIpAddress(), node.getFiles());
+        } catch (IOException | ClassNotFoundException e){
+            e.printStackTrace();
+        }
     }
 
     public void start() {
         new Thread(() -> {
-            while (true) {
-                try {
-                    Socket cliente = server.accept();
-                    Node node = new Node(cliente);
-                    HashMap<String, String> nodeFiles = node.receiveFileData();
-
-                    // Adiciona arquivos
-                    String address = socket.getInterface().getHostAddress();
-                    ArrayList<FileData> fileDataList = new ArrayList<>();
-                    for(String md5: nodeFiles.keySet())
-                        fileDataList.add(new FileData(md5, nodeFiles.get(md5), address));
-                    files.put(address, fileDataList);
-
-                    System.out.println(files);
-                    this.nodes.add(node);
-                } catch (IOException | ClassNotFoundException e){
-                    e.printStackTrace();
-                }
-            }
+            while (true)
+                this.handleNodeConnection();
         }).start();
 //        int i = 0;
 //
@@ -63,7 +64,7 @@ public class NameNodeServer {
 //                System.out.println(node);
 //            }
 //        }
-
+/*
         new Thread(() -> {
             try {
                 multicastReceiver();
@@ -74,7 +75,7 @@ public class NameNodeServer {
 
         new Thread(() -> {
             multicastSelf();
-        }).start();
+        }).start();*/
 
 
     }
@@ -121,11 +122,8 @@ public class NameNodeServer {
         oos.writeObject(multicastMessage);
         byte[] data = baos.toByteArray();
 
-        DatagramPacket packet = new DatagramPacket(
-                data,
-                data.length,
-                group,
-                4446);
+        DatagramPacket packet = 
+            new DatagramPacket(data, data.length, group, 4446);
 
         socket.send(packet);
     }
