@@ -1,4 +1,4 @@
-package com.pucrs;
+package com.pucrs.br.distribuida.t1.helper;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -6,7 +6,7 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-public class Md5 {
+public class MD5 {
     public static String generate(String filePath) {
         String checksum = null;
         try {

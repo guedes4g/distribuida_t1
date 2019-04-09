@@ -1,4 +1,7 @@
-package com.pucrs;
+package com.pucrs.br.distribuida.t1.server;
+
+import com.pucrs.br.distribuida.t1.entity.FileData;
+import com.pucrs.br.distribuida.t1.entity.Node;
 
 import java.io.*;
 import java.net.*;
@@ -6,7 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class NameNodeServer {
+public class SuperNode {
     private ServerSocket server;
     private ArrayList<Node> nodes;
     private byte[] bufferMulticastReceiver;
@@ -16,7 +19,7 @@ public class NameNodeServer {
 
     private HashMap<String, List<FileData>> files;
     
-    public NameNodeServer() throws IOException {
+    public SuperNode() throws IOException {
         this.server = new ServerSocket(3333);
         this.socket = new MulticastSocket(4446);
         
@@ -35,10 +38,10 @@ public class NameNodeServer {
             Socket cliente = server.accept();
             Node node = new Node(cliente);
 
-            //add node into node's list
+            //add server into server's list
             this.nodes.add(node);
             
-            //get files from node and insert in the hash map 
+            //get files from server and insert in the hash map
             files.put(node.getIpAddress(), node.getFiles());
         } catch (IOException | ClassNotFoundException e){
             e.printStackTrace();
@@ -59,9 +62,9 @@ public class NameNodeServer {
 //            } catch (InterruptedException e) {
 //                e.printStackTrace();
 //            }
-//            for (Node node:
+//            for (Node server:
 //                 this.nodes) {
-//                System.out.println(node);
+//                System.out.println(server);
 //            }
 //        }
 /*

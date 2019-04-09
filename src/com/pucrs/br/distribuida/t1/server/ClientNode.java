@@ -1,18 +1,21 @@
-package com.pucrs;
+package com.pucrs.br.distribuida.t1.server;
+
+import com.pucrs.br.distribuida.t1.helper.MD5;
+import com.pucrs.br.distribuida.t1.helper.Terminal;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 
-public class ClientNodeServer {
+public class ClientNode {
     private HashMap<String, String> files;
     private String hostname;
     private int port;
     
     private Socket supernode;
 
-    ClientNodeServer(String hostname, int port) {
+    public ClientNode(String hostname, int port) {
         this.hostname = hostname;
         this.port = port;
         
@@ -31,7 +34,7 @@ public class ClientNodeServer {
             BufferedReader reader = new BufferedReader(new InputStreamReader(supernode.getInputStream()));
             PrintWriter writer = new PrintWriter(supernode.getOutputStream(), true);
             
-            //send the files to super node
+            //send the files to super server
             this.sendRegisteredFiles(supernode);
             
             this.startUI();
@@ -73,7 +76,7 @@ public class ClientNodeServer {
             for (File file : listOfFiles)
                 if (file.isFile()) {
                     String fileName = file.getName();
-                    String md5 = Md5.generate(file.getAbsolutePath());
+                    String md5 = MD5.generate(file.getAbsolutePath());
                     this.files.put(md5, fileName);
                 }
     }

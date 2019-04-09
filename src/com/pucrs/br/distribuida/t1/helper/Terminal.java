@@ -1,4 +1,4 @@
-package com.pucrs;
+package com.pucrs.br.distribuida.t1.helper;
 
 import java.util.Scanner;
 

@@ -1,11 +1,11 @@
-package com.pucrs;
+package com.pucrs.br.distribuida.t1.entity;
 
 public class FileData {
     private String md5;
     private String name;
     private String ip;
 
-    // The node that requested the file
+    // The server that requested the file
     private String toIp;
 
     public FileData(String md5, String name, String ip) {

@@ -1,4 +1,4 @@
-package com.pucrs;
+package com.pucrs.br.distribuida.t1.entity;
 
 import java.util.HashMap;
 
