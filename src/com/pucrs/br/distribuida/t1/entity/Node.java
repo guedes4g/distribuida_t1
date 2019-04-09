@@ -1,9 +1,11 @@
 package com.pucrs.br.distribuida.t1.entity;
 
 import com.pucrs.br.distribuida.t1.dto.Client2Super;
+import com.pucrs.br.distribuida.t1.helper.Terminal;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,19 +19,16 @@ public class Node {
     private long lastPingTime = 0;
     private int id;
     
-    public Node(int id) throws IOException {
+    public Node(int id, Socket socket) throws IOException {
         this.id = id;
-
-        this.updateLastPingTime();
-    }
-
-    public void updateSocket(Socket socket) throws IOException {
         this.socket = socket;
 
         this.out = new PrintWriter(socket.getOutputStream(), true);
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         this.is = new ObjectInputStream(socket.getInputStream());
         this.os = new ObjectOutputStream(socket.getOutputStream());
+
+        this.updateLastPingTime();
     }
 
     public int getId() {
@@ -41,7 +40,14 @@ public class Node {
     }
 
     public Client2Super getRequest() throws IOException, ClassNotFoundException {
-        return (Client2Super) is.readObject();
+        try {
+            return (Client2Super) is.readObject();
+        }
+        catch (SocketException ex) {
+            Terminal.debug("Socket exception: " + ex.getMessage());
+        }
+
+        return null;
     }
     
     public List<FileData> getFiles(HashMap<String, String> uploadFilesList) {

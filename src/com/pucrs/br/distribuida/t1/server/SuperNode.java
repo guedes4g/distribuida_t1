@@ -48,66 +48,36 @@ public class SuperNode {
             Node node = this.getNode(socket);
             Terminal.debug("A connection has been made with '"+node+"'.");
 
-            //handle this client request
-            this.handleClientRequest(node);
-
+            //as soon as a new connection has been made, initiate a new thread
+            Terminal.debug("Initiate a new 'client node worker' for '"+node+"'");
+            new Thread(new ClientNodeWorker(node, this.files)).start();
         }
-        catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
+        catch (IOException e) {
+            Terminal.debug("handleClientNodesRequests IOException: " + e.getMessage());
         }
     }
 
     private Node getNode(Socket socket) throws IOException {
+        /*
+            TO BE REVIEWED - Do we have to keep the socket alive, or create a new one every single request?
+
+
         Node node = null;
         String ipAddress = socket.getInetAddress().getHostAddress();
 
         if (!this.nodes.containsKey(ipAddress))
-            this.nodes.put(ipAddress, new Node(this.nodes.size()));
+            this.nodes.put(ipAddress, new Node(this.nodes.size(), socket));
 
         //get the node
         node = this.nodes.get(ipAddress);
 
-        //update the socket
-        node.updateSocket(socket);
+        return node;*/
 
+        Node node = new Node(this.nodes.size(), socket);
+
+        this.nodes.put(node.getId() + "", node);
 
         return node;
-    }
-
-    private void handleClientRequest(Node node) throws IOException, ClassNotFoundException {
-        Client2Super req = node.getRequest();
-
-        switch (req.getCommand()) {
-            case 1:
-                Terminal.debug("Node '"+node+"' sent his list of files.");
-                this.handleNodeListOfFiles(node, req.getUploadFilesList());
-                break;
-
-            case 2: //PING
-                Terminal.debug("Ping is being made by '"+node+"'.");
-                node.updateLastPingTime();
-                break;
-
-            case 3:
-                Terminal.debug("Node '"+node+"' is requesting list of files in network.");
-                this.handleSendListOfFilesInNetwork(node);
-                break;
-        }
-    }
-
-    private void handleSendListOfFilesInNetwork(Node node) {
-        List<FileData> list = new ArrayList<>();
-
-        //Create a list containing all files in other servers (removing it's own)
-        this.files.forEach((key, files) -> {
-            if (node.getId() != (key))
-                list.addAll(files);
-        });
-    }
-
-    private void handleNodeListOfFiles(Node node, HashMap<String, String> uploadFilesList) {
-        //get files from server and insert in the hash map
-        files.put(node.getId(), node.getFiles(uploadFilesList));
     }
 
     public void start() {
@@ -193,4 +163,92 @@ public class SuperNode {
         socket.send(packet);
     }
 
+    private class ClientNodeWorker implements Runnable {
+        private Node node;
+        private HashMap<Integer, List<FileData>> superNodeFiles;
+
+        public ClientNodeWorker(Node node, HashMap<Integer, List<FileData>> superNodeFiles) {
+            this.node = node;
+            this.superNodeFiles = superNodeFiles;
+        }
+
+        @Override
+        public void run() {
+            try {
+                this.handleClientRequest();
+
+                this.debug("Connection is closed");
+            }
+            catch (InterruptedException e) {
+                Terminal.debug("Node InterruptedException: " + e.getMessage());
+            }
+            catch (IOException e) {
+                Terminal.debug("Node IOException: " + e.getMessage());
+            }
+            catch (ClassNotFoundException e) {
+                Terminal.debug("Node ClassNotFoundException: " + e.getMessage());
+            }
+        }
+
+        private void handleClientRequest() throws IOException, ClassNotFoundException, InterruptedException {
+            //handle this client request
+            while (true) {
+                this.debug("Going to wait for my next request.");
+                Client2Super req = this.node.getRequest();
+
+                //Check if the connection is still alive
+                if (req != null) {
+                    this.debug("Request received is '" + req.getCommand() + "'.");
+                    this.handleCommand(req);
+
+                    //waits quickly
+                    Thread.sleep(100);
+                }
+
+                //Ends execution when the connection is closed
+                else
+                    return;
+            }
+        }
+
+        private void handleCommand(Client2Super req) {
+            switch (req.getCommand()) {
+                case 1:
+                    this.debug("Just sent my updated list of files.");
+                    this.handleNodeListOfFiles(req.getUploadFilesList());
+                    break;
+
+                case 2: //PING
+                    this.debug("Just pinged - keep me alive.");
+                    this.node.updateLastPingTime();
+                    break;
+
+                case 3:
+                    this.debug("Just requested list of files in the network.");
+                    this.handleSendListOfFilesInNetwork();
+                    break;
+            }
+        }
+
+        private void handleSendListOfFilesInNetwork() {
+            List<FileData> list = new ArrayList<>();
+
+            //Create a list containing all files in other servers (removing it's own)
+            this.superNodeFiles.forEach((key, files) -> {
+                if (this.node.getId() != (key))
+                    list.addAll(files);
+            });
+
+            System.out.println(list);
+        }
+
+        private void handleNodeListOfFiles(HashMap<String, String> uploadFilesList) {
+            //get files from server and insert in the hash map
+            files.put(node.getId(), node.getFiles(uploadFilesList));
+        }
+
+        private void debug(String message) {
+            Terminal.debug("Client Node '"+this.node+"' :: " + message);
+        }
+    }
 }

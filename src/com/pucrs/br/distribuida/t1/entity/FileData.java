@@ -5,19 +5,10 @@ public class FileData {
     private String name;
     private String ip;
 
-    // The server that requested the file
-    private String toIp;
-
     public FileData(String md5, String name, String ip) {
         this.md5 = md5;
         this.name = name;
         this.ip = ip;
-    }
-
-    public FileData(String md5, String name, String ip, String toIp) {
-        this.md5 = md5;
-        this.name = name;
-        this.toIp = toIp;
     }
 
     public String getMd5() {
@@ -44,16 +35,8 @@ public class FileData {
         this.ip = ip;
     }
 
-    public String getToIp() {
-        return toIp;
-    }
-
-    public void setToIp(String toIp) {
-        this.toIp = toIp;
-    }
-
     @Override
     public String toString() {
-        return "md5: " + md5 + ", name: " + name + ", ip: " + ip + ", toIp:" + toIp;
+        return "md5: " + md5 + ", name: " + name + ", ip: " + ip;
     }
 }

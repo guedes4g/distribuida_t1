@@ -15,6 +15,7 @@ public class ClientNode {
     private int port;
     
     private Socket supernode;
+    private ObjectOutputStream superNodeOS;
 
     public ClientNode(String hostname, int port) {
         this.hostname = hostname;
@@ -30,9 +31,8 @@ public class ClientNode {
     public void start() {
         try {
             supernode = new Socket(hostname, port);
-                    
-            BufferedReader reader = new BufferedReader(new InputStreamReader(supernode.getInputStream()));
-            PrintWriter writer = new PrintWriter(supernode.getOutputStream(), true);
+
+            this.superNodeOS = new ObjectOutputStream(this.supernode.getOutputStream());
             
             //send the files to super server
             Terminal.debug("Sending files to supernode");
@@ -75,12 +75,16 @@ public class ClientNode {
     private void startUI() {
         while (true) {
             System.out.println("Hi! What you want to do?");
-            System.out.println("[0] get files list.");
+            System.out.println("[1] get files list from entire network.");
+            System.out.println("[98] toggle debug.");
             System.out.println("[99] exit.");
             
             switch (Terminal.getInt()) {
                 case 1:
                     this.getFilesFromSuperNode();
+                    break;
+                case 98:
+                    this.toggleDebug();
                     break;
                 case 99:
                     return;
@@ -104,6 +108,11 @@ public class ClientNode {
     private void getFilesFromSuperNode() {
         this.send(new Client2Super(3, null));
     }
+
+    private void toggleDebug() {
+        System.out.println("ok, debug was toggled.");
+        Terminal.toggleDebug();
+    }
     
     private void sendRegisteredFiles() {
         this.send(new Client2Super(1, this.files));
@@ -111,8 +120,8 @@ public class ClientNode {
 
     private void send(Client2Super obj) {
         try {
-            ObjectOutputStream os = new ObjectOutputStream(this.supernode.getOutputStream());
-            os.writeObject(obj);
+            //ObjectOutputStream os = new ObjectOutputStream(this.supernode.getOutputStream());
+            this.superNodeOS.writeObject(obj);
         }
         catch (IOException ex) {
             ex.printStackTrace();
