@@ -1,6 +1,7 @@
 package com.pucrs.br.distribuida.t1.server;
 
 import com.pucrs.br.distribuida.t1.dto.Client2Super;
+import com.pucrs.br.distribuida.t1.dto.Super2Client;
 import com.pucrs.br.distribuida.t1.entity.FileData;
 import com.pucrs.br.distribuida.t1.entity.Node;
 import com.pucrs.br.distribuida.t1.helper.Terminal;
@@ -231,6 +232,16 @@ public class SuperNode {
         }
 
         private void handleSendListOfFilesInNetwork() {
+            Terminal.debug("Retrieving list of files in network.");
+            List<FileData> list = this.getListOfNetworkFiles();
+
+            //Encapsulate and send to connected node
+            node.send(new Super2Client(1, list));
+
+            System.out.println(list);
+        }
+
+        private List<FileData> getListOfNetworkFiles() {
             List<FileData> list = new ArrayList<>();
 
             //Create a list containing all files in other servers (removing it's own)
@@ -239,7 +250,7 @@ public class SuperNode {
                     list.addAll(files);
             });
 
-            System.out.println(list);
+            return list;
         }
 
         private void handleNodeListOfFiles(HashMap<String, String> uploadFilesList) {

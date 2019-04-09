@@ -1,6 +1,7 @@
 package com.pucrs.br.distribuida.t1.entity;
 
 import com.pucrs.br.distribuida.t1.dto.Client2Super;
+import com.pucrs.br.distribuida.t1.dto.Super2Client;
 import com.pucrs.br.distribuida.t1.helper.Terminal;
 
 import java.io.*;
@@ -44,10 +45,19 @@ public class Node {
             return (Client2Super) is.readObject();
         }
         catch (SocketException ex) {
-            Terminal.debug("Socket exception: " + ex.getMessage());
+            Terminal.debug("Node - get - Socket exception: " + ex.getMessage());
         }
 
         return null;
+    }
+
+    public void send(Super2Client bag) {
+        try {
+            os.writeObject(bag);
+        }
+        catch (IOException ex) {
+            Terminal.debug("Node - send - IO Exception: " + ex.getMessage());
+        }
     }
     
     public List<FileData> getFiles(HashMap<String, String> uploadFilesList) {

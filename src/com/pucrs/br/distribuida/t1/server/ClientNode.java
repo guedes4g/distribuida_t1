@@ -17,6 +17,8 @@ public class ClientNode {
     private Socket supernode;
     private ObjectOutputStream superNodeOS;
 
+    private Thread keepAliveThread = null;
+
     public ClientNode(String hostname, int port) {
         this.hostname = hostname;
         this.port = port;
@@ -26,6 +28,10 @@ public class ClientNode {
         //get files from my computer
         Terminal.debug("Registering files from my computer.");
         this.registerFiles();
+
+        //keep alive - ping
+        Terminal.debug("Registering keep alive thread");
+        this.initiateKeepAliveThread();
     }
 
     public void start() {
@@ -40,11 +46,15 @@ public class ClientNode {
 
             //start new thread and initiate the pings
             Terminal.debug("Initiating keep alive process");
-            this.keepAlive();
+            this.keepAliveThread.start();
 
             //Start UI
             Terminal.debug("Starting the UI");
             this.startUI();
+
+            //Ends connection
+            this.superNodeOS.close();
+            this.supernode.close();
 
         } catch (UnknownHostException ex) {
             System.out.println("Server not found: " + ex.getMessage());
@@ -53,11 +63,11 @@ public class ClientNode {
         }
     }
 
-    private void keepAlive() {
-        new Thread(() -> {
+    private void initiateKeepAliveThread() {
+        this.keepAliveThread = new Thread(() -> {
             while (true)
                 this.ping();
-        }).start();
+        });
     }
 
     private void ping() {
