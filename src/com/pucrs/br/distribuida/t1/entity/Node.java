@@ -3,6 +3,7 @@ package com.pucrs.br.distribuida.t1.entity;
 import com.pucrs.br.distribuida.t1.dto.Client2Super;
 import com.pucrs.br.distribuida.t1.dto.Super2Client;
 import com.pucrs.br.distribuida.t1.helper.Terminal;
+import com.pucrs.br.distribuida.t1.helper.Timer;
 
 import java.io.*;
 import java.net.Socket;
@@ -34,6 +35,14 @@ public class Node {
 
     public int getId() {
         return this.id;
+    }
+
+    public long getLastPingTime() {
+        return this.lastPingTime;
+    }
+
+    public boolean isTimeOuted() {
+        return Timer.isExpired(this);
     }
 
     public void updateLastPingTime() {

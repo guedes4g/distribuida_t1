@@ -11,6 +11,7 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class SuperNode {
     private ServerSocket server;
@@ -86,6 +87,11 @@ public class SuperNode {
             while (true)
                 this.handleClientNodesRequests();
         }).start();
+
+        new Thread(() -> {
+            while (true)
+                this.handleClientTimeoutRemoval();
+        }).start();
 //        int i = 0;
 //
 //        while (true) {
@@ -116,6 +122,39 @@ public class SuperNode {
 
     }
 
+    private void handleClientTimeoutRemoval() {
+        try {
+            Terminal.debug("timeout removal - get list of expired nodes");
+            List<Node> nodes = this.getNodesTimeouted();
+
+            Terminal.debug("timeout removal - removing nodes from my watch");
+            this.removeExpiredNodes(nodes);
+
+
+            Thread.sleep(950);
+        }
+        catch (InterruptedException e) {
+            Terminal.debug("handleClientTimeoutRemoval InterruptedException: " + e.getMessage());
+        }
+    }
+
+    private void removeExpiredNodes(List<Node> nodes) {
+        for (Node node : nodes) {
+            Terminal.debug("timeout removal - removing '"+node+"'");
+
+            //removing files associated
+            this.files.remove(node.getId());
+
+            //removing from node's list
+            this.nodes.remove(node.getId() + "");
+        }
+    }
+
+    private List<Node> getNodesTimeouted() {
+        return this.nodes.values().stream()
+            .filter(n -> n.isTimeOuted())
+            .collect(Collectors.toList());
+    }
 
     public void multicastReceiver() throws IOException {
         socket.joinGroup(group);
