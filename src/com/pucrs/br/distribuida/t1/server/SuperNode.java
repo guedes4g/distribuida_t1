@@ -20,8 +20,9 @@ public class SuperNode {
     private InetAddress group;
     private MulticastSocket socket;
 
-    private HashMap<String, Node> nodes;
+    private HashMap<Integer, Node> nodes;
     private HashMap<Integer, List<FileData>> files;
+    private int nodeIdEnumerator = 1;
     
     public SuperNode(int unicastPort, int multicastPort) throws IOException {
         Terminal.debug("Initiating unicast socket with nodes on port '"+unicastPort+"'");
@@ -60,24 +61,9 @@ public class SuperNode {
     }
 
     private Node getNode(Socket socket) throws IOException {
-        /*
-            TO BE REVIEWED - Do we have to keep the socket alive, or create a new one every single request?
+        Node node = new Node(this.nodeIdEnumerator++, socket);
 
-
-        Node node = null;
-        String ipAddress = socket.getInetAddress().getHostAddress();
-
-        if (!this.nodes.containsKey(ipAddress))
-            this.nodes.put(ipAddress, new Node(this.nodes.size(), socket));
-
-        //get the node
-        node = this.nodes.get(ipAddress);
-
-        return node;*/
-
-        Node node = new Node(this.nodes.size(), socket);
-
-        this.nodes.put(node.getId() + "", node);
+        this.nodes.put(node.getId(), node);
 
         return node;
     }
@@ -92,20 +78,7 @@ public class SuperNode {
             while (true)
                 this.handleClientTimeoutRemoval();
         }).start();
-//        int i = 0;
-//
-//        while (true) {
-//            System.out.println((++i) + " Round");
-//            try {
-//                Thread.sleep(1000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-//            for (Node server:
-//                 this.nodes) {
-//                System.out.println(server);
-//            }
-//        }
+
 /*
         new Thread(() -> {
             try {
@@ -129,7 +102,6 @@ public class SuperNode {
 
             Terminal.debug("timeout removal - removing nodes from my watch");
             this.removeExpiredNodes(nodes);
-
 
             Thread.sleep(950);
         }
@@ -276,8 +248,6 @@ public class SuperNode {
 
             //Encapsulate and send to connected node
             node.send(new Super2Client(1, list));
-
-            System.out.println(list);
         }
 
         private List<FileData> getListOfNetworkFiles() {
@@ -285,7 +255,7 @@ public class SuperNode {
 
             //Create a list containing all files in other servers (removing it's own)
             this.superNodeFiles.forEach((key, files) -> {
-                if (this.node.getId() != (key))
+                if (this.node.getId() != key)
                     list.addAll(files);
             });
 
