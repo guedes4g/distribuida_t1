@@ -9,14 +9,14 @@ public class Main {
     public static void main(String args[]) throws IOException {
         if (args.length == 0) {
             System.out.println("For super-node, use: program.java supernode unicastPort multicastPort");
-            System.out.println("For client-node, use: program.java clientnode superNodeIpAddress superNodePort");
+            System.out.println("For client-node, use: program.java clientnode superNodeIpAddress superNodePort p2pPort");
             System.exit(1);
         }
         
         if(args[0].equals("supernode"))
             new SuperNode(toInt(args[1]), toInt(args[2])).start();
         else
-            new ClientNode(args[1], toInt(args[2])).start();
+            new ClientNode(args[1], toInt(args[2]), toInt(args[3])).start();
     }
 
     private static int toInt(String s) {

@@ -14,8 +14,6 @@ import java.util.List;
 
 public class Node {
     private Socket socket;
-    private PrintWriter out;
-    private BufferedReader in;
     private ObjectInputStream is;
     private ObjectOutputStream os;
     private long lastPingTime = 0;
@@ -25,8 +23,6 @@ public class Node {
         this.id = id;
         this.socket = socket;
 
-        this.out = new PrintWriter(socket.getOutputStream(), true);
-        this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         this.is = new ObjectInputStream(socket.getInputStream());
         this.os = new ObjectOutputStream(socket.getOutputStream());
 

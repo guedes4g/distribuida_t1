@@ -14,9 +14,9 @@ import java.util.HashMap;
 import java.util.List;
 
 public class ClientNode {
-    private HashMap<String, String> files;
-    private String hostname;
-    private int port;
+    private HashMap<String, String> files = new HashMap<>();
+    private String superNodeHostname;
+    private int superNodePort, p2pPort;
     
     private Socket supernode;
     private ObjectOutputStream superNodeOS;
@@ -24,11 +24,10 @@ public class ClientNode {
 
     private Thread keepAliveThread = null;
 
-    public ClientNode(String hostname, int port) {
-        this.hostname = hostname;
-        this.port = port;
-        
-        this.files = new HashMap<>();
+    public ClientNode(String superNodeHostname, int superNodePort, int p2pPort) {
+        this.superNodeHostname = superNodeHostname;
+        this.superNodePort = superNodePort;
+        this.p2pPort = p2pPort;
         
         //get files from my computer
         Terminal.debug("Registering files from my computer.");
@@ -41,7 +40,7 @@ public class ClientNode {
 
     public void start() {
         try {
-            supernode = new Socket(hostname, port);
+            supernode = new Socket(superNodeHostname, superNodePort);
 
             //initiate streams
             this.superNodeOS = new ObjectOutputStream(this.supernode.getOutputStream());
