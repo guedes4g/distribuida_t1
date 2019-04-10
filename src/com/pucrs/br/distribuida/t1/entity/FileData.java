@@ -1,6 +1,8 @@
 package com.pucrs.br.distribuida.t1.entity;
 
-public class FileData {
+import java.io.Serializable;
+
+public class FileData implements Serializable {
     private String md5;
     private String name;
     private String ip;

@@ -2,6 +2,7 @@ package com.pucrs.br.distribuida.t1.dto;
 
 import com.pucrs.br.distribuida.t1.entity.FileData;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /*
@@ -15,9 +16,9 @@ public class Super2Client extends NodeCommunication {
         super(command, body);
     }
 
-    public List<FileData> getFilesList() {
+    public ArrayList<FileData> getFilesList() {
         if (command == 1)
-            return (List<FileData>) this.body;
+            return (ArrayList<FileData>) this.body;
 
         return null;
     }

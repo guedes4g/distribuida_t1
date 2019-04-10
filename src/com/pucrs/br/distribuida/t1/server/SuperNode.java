@@ -244,14 +244,14 @@ public class SuperNode {
 
         private void handleSendListOfFilesInNetwork() {
             Terminal.debug("Retrieving list of files in network.");
-            List<FileData> list = this.getListOfNetworkFiles();
+            ArrayList<FileData> list = this.getListOfNetworkFiles();
 
             //Encapsulate and send to connected node
             node.send(new Super2Client(1, list));
         }
 
-        private List<FileData> getListOfNetworkFiles() {
-            List<FileData> list = new ArrayList<>();
+        private ArrayList<FileData> getListOfNetworkFiles() {
+            ArrayList<FileData> list = new ArrayList<>();
 
             //Create a list containing all files in other servers (removing it's own)
             this.superNodeFiles.forEach((key, files) -> {

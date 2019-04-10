@@ -1,13 +1,17 @@
 package com.pucrs.br.distribuida.t1.server;
 
 import com.pucrs.br.distribuida.t1.dto.Client2Super;
+import com.pucrs.br.distribuida.t1.dto.Super2Client;
+import com.pucrs.br.distribuida.t1.entity.FileData;
 import com.pucrs.br.distribuida.t1.helper.MD5;
 import com.pucrs.br.distribuida.t1.helper.Terminal;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class ClientNode {
     private HashMap<String, String> files;
@@ -16,6 +20,7 @@ public class ClientNode {
     
     private Socket supernode;
     private ObjectOutputStream superNodeOS;
+    private ObjectInputStream superNodeIS;
 
     private Thread keepAliveThread = null;
 
@@ -38,7 +43,9 @@ public class ClientNode {
         try {
             supernode = new Socket(hostname, port);
 
+            //initiate streams
             this.superNodeOS = new ObjectOutputStream(this.supernode.getOutputStream());
+            this.superNodeIS = new ObjectInputStream(this.supernode.getInputStream());
             
             //send the files to super server
             Terminal.debug("Sending files to supernode");
@@ -102,7 +109,6 @@ public class ClientNode {
 
             System.out.println();
         }
-        
     }
     
     private void registerFiles()  {
@@ -116,7 +122,91 @@ public class ClientNode {
     }
 
     private void getFilesFromSuperNode() {
+        //ask to the superNode sends the list of files in the network
+        Terminal.debug("Asking to superNode the list of files in network.");
         this.send(new Client2Super(3, null));
+
+        Terminal.debug("Waiting for supeNode return the list of files in network.");
+        List<FileData> filesFromNetwork = this.waitForListOfFilesFromNetwork();
+
+        if (filesFromNetwork != null) {
+            Terminal.debug("Returned '"+filesFromNetwork.size()+"' files from network");
+
+            this.printListOfNetworkFiles(filesFromNetwork);
+
+            this.askListOfFilesToDownload(filesFromNetwork);
+        }
+        else
+            System.out.println("An error has been ocurred while waiting for the list of files from network. Supernode returned with an unknown bag.");
+    }
+
+    private void askListOfFilesToDownload(List<FileData> filesFromNetwork) {
+        System.out.println("Insert here the files you want to download separating with commas...");
+        System.out.println("Insert -1 to exit.");
+
+        //wait for user's input
+        String userInput = Terminal.getString();
+
+        //It means the user really wants to download
+        if (!userInput.equals("-1")) {
+            List<FileData> files = this.getNetworkFilesBasedOnUserInput(userInput, filesFromNetwork);
+            
+            this.initiateP2P(files);
+        }
+    }
+
+    private void initiateP2P(List<FileData> files) {
+
+    }
+
+    private List<FileData> getNetworkFilesBasedOnUserInput(String userInput, List<FileData> filesFromNetwork) {
+        String[] tokens = userInput.split(",");
+
+        List<FileData> files = new ArrayList<>();
+        FileData f = null;
+        int index = 0;
+
+        //Iterate all user's tokens
+        for (String token : tokens) {
+            try {
+                //try to parse the index
+                index = Integer.parseInt(token);
+
+                //try to retrieve the object based on index (it may throw an exception)
+                f = filesFromNetwork.get(index);
+
+                //in case it worked, add into returned list
+                files.add(f);
+            }
+            catch (Exception ex) {}
+        }
+
+        return files;
+    }
+
+    private void printListOfNetworkFiles(List<FileData> filesFromNetwork) {
+        int iterator = 0;
+
+        System.out.println("\nHere's the network list of files.");
+
+        for (FileData file : filesFromNetwork)
+            System.out.println("["+(iterator++)+"] " + file.getName());
+    }
+
+    private List<FileData> waitForListOfFilesFromNetwork() {
+        try {
+            Super2Client bag = (Super2Client) this.superNodeIS.readObject();
+
+            return bag.getFilesList();
+        }
+        catch (IOException e) {
+            Terminal.debug("waitForListOfFilesFromNetwork - IOException: " + e.getMessage());
+        }
+        catch (ClassNotFoundException e) {
+            Terminal.debug("waitForListOfFilesFromNetwork - ClassNotFound: " + e.getMessage());
+        }
+
+        return null;
     }
 
     private void toggleDebug() {
