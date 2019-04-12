@@ -6,7 +6,7 @@ import com.pucrs.br.distribuida.t1.server.SuperNode;
 import java.io.IOException;
 
 public class Main {
-    public static void main(String args[]) throws IOException {
+    public static void main(String args[]) throws Exception {
         if (args.length == 0) {
             System.out.println("For super-node, use: program.java supernode unicastPort multicastPort");
             System.out.println("For client-node, use: program.java clientnode superNodeIpAddress superNodePort p2pPort");

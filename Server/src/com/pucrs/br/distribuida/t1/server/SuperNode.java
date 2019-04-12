@@ -2,6 +2,7 @@ package com.pucrs.br.distribuida.t1.server;
 
 import com.pucrs.br.distribuida.t1.dto.Client2Super;
 import com.pucrs.br.distribuida.t1.dto.Super2Client;
+import com.pucrs.br.distribuida.t1.dto.Super2Super;
 import com.pucrs.br.distribuida.t1.entity.FileData;
 import com.pucrs.br.distribuida.t1.entity.Node;
 import com.pucrs.br.distribuida.t1.helper.Terminal;
@@ -11,36 +12,52 @@ import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import org.jgroups.JChannel;
+import org.jgroups.Message;
+import org.jgroups.ReceiverAdapter;
+import org.jgroups.View;
+import org.jgroups.blocks.MethodCall;
+import org.jgroups.blocks.RequestOptions;
+import org.jgroups.blocks.ResponseMode;
+import org.jgroups.blocks.RpcDispatcher;
+import org.jgroups.util.RspList;
 
-public class SuperNode {
+
+public class SuperNode extends ReceiverAdapter {
     private ServerSocket server;
     private byte[] bufferMulticastReceiver;
     private byte[] bufferMulticastPublisher;
-    private InetAddress group;
     private MulticastSocket socket;
 
     private HashMap<Integer, Node> nodes;
     private HashMap<Integer, List<FileData>> files;
     private int nodeIdEnumerator = 1;
-    
-    public SuperNode(int unicastPort, int multicastPort) throws IOException {
+    private JChannel channel;
+    private RpcDispatcher dispacherRPC;
+
+    public SuperNode(int unicastPort, int multicastPort) throws IOException, Exception {
+        startJChannel("superNodeGroup");
+
         Terminal.debug("Initiating unicast socket with nodes on port '"+unicastPort+"'");
         this.server = new ServerSocket(unicastPort);
 
         Terminal.debug("Initiating multicast socket with supernodes on port '"+multicastPort+"'");
         this.socket = new MulticastSocket(multicastPort);
-        
+
         //Previne loopback na mesma maquina
         socket.setLoopbackMode(true);
 
         this.bufferMulticastReceiver = new byte[1024 * 4];
-        this.group = InetAddress.getByName("224.0.0.1");
 
         this.nodes = new HashMap<>();
         this.files = new HashMap<>();
+
+        RequestFiles();
     }
-    
+
     private void handleClientNodesRequests() {
         try {
             //accept new connection
@@ -78,21 +95,57 @@ public class SuperNode {
             while (true)
                 this.handleClientTimeoutRemoval();
         }).start();
+    }
 
-/*
-        new Thread(() -> {
-            try {
-                multicastReceiver();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }).start();
+    @Override
+    public void viewAccepted(View new_view) {
+        System.out.println("** view: " + new_view + ", members: " + new_view.size());
+    }
 
-        new Thread(() -> {
-            multicastSelf();
-        }).start();*/
+    @Override
+    public void receive(Message msg) {
+        try {
+            System.out.println(msg.getSrc() + ": " + msg.getObject());
+        }
+        catch(Exception e) {
+        }
+    }
 
+    public Super2Super getFiles(){
+        return new Super2Super(1,files);
+    }
 
+    public String getFiless(){
+        return "HELLO";
+    }
+    private void RequestFiles() throws Exception {
+        RequestOptions opts=new RequestOptions(ResponseMode.GET_ALL, 5000);
+        System.out.println(files.getClass());
+
+        RspList rsp_list = dispacherRPC.callRemoteMethods(
+                null,
+                new MethodCall("getFiles", new Object[]{}, new Class[]{}),
+                opts);
+
+        System.out.println("RequestFiles " + rsp_list.getResults());
+    }
+
+//    private void sendJgroupMessage(Object obj){
+//        Message msg = new Message(null, obj).setFlag(Message.Flag.RSVP);
+//        try {
+//            channel.send(msg);
+//        } catch (Exception ex) {
+//            Terminal.debug("sendJgroupMessage Exception: " + ex.getMessage());
+//            Logger.getLogger(SuperNode.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//    }
+
+    private void startJChannel(String group) throws Exception {
+        channel = new JChannel();
+        channel.setReceiver(this);
+        channel.connect(group);
+        dispacherRPC = new RpcDispatcher(channel, this);
+        //      channel.close();
     }
 
     private void handleClientTimeoutRemoval() {
@@ -124,55 +177,8 @@ public class SuperNode {
 
     private List<Node> getNodesTimeouted() {
         return this.nodes.values().stream()
-            .filter(n -> n.isTimeOuted())
-            .collect(Collectors.toList());
-    }
-
-    public void multicastReceiver() throws IOException {
-        socket.joinGroup(group);
-        while (true) {
-            DatagramPacket packet = new DatagramPacket(bufferMulticastReceiver, bufferMulticastReceiver.length);
-            socket.receive(packet);
-
-            ByteArrayInputStream bais = new ByteArrayInputStream(bufferMulticastReceiver);
-            ObjectInputStream ois = new ObjectInputStream(bais);
-
-            String received = new String(
-                    packet.getData(), 0, packet.getLength());
-
-            System.out.print("RECEIVED MULTICAST: " + received);
-            System.out.println("MULTICAST: " + packet.getAddress());
-            if ("end".equals(received)) {
-                break;
-            }
-        }
-//        socket.leaveGroup(group);
-//        socket.close();
-    }
-
-    //TESTE
-    public void multicastSelf() {
-        while (true) {
-            try {
-                try {Thread.sleep(1000);} catch (Exception e) {}
-                System.out.println("SENT MULTICAST: " + InetAddress.getLocalHost().getHostAddress()+":"+server.getLocalPort());
-                multicast(NetworkInterface.getByIndex(1)+":"+server.getLocalPort());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    public void multicast(Object multicastMessage) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        oos.writeObject(multicastMessage);
-        byte[] data = baos.toByteArray();
-
-        DatagramPacket packet = 
-            new DatagramPacket(data, data.length, group, 4446);
-
-        socket.send(packet);
+                .filter(n -> n.isTimeOuted())
+                .collect(Collectors.toList());
     }
 
     private class ClientNodeWorker implements Runnable {
