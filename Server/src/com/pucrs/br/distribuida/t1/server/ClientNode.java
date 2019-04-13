@@ -1,29 +1,42 @@
 package com.pucrs.br.distribuida.t1.server;
 
 import com.pucrs.br.distribuida.t1.dto.Client2Super;
+import com.pucrs.br.distribuida.t1.dto.NodeCommunication;
 import com.pucrs.br.distribuida.t1.dto.Super2Client;
 import com.pucrs.br.distribuida.t1.entity.FileData;
+import com.pucrs.br.distribuida.t1.entity.FileDataResponse;
 import com.pucrs.br.distribuida.t1.helper.MD5;
 import com.pucrs.br.distribuida.t1.helper.Terminal;
 
 import java.io.*;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class ClientNode {
     private HashMap<String, String> files = new HashMap<>();
     private String superNodeHostname;
     private int superNodePort, p2pPort;
-    
+    private ServerSocket p2pServer;
+
     private Socket supernode;
     private ObjectOutputStream superNodeOS;
     private ObjectInputStream superNodeIS;
 
     private Thread keepAliveThread = null;
+    private ClientNode clientNode;
 
+    private String baseDir = "./client/files/";
+    private String baseResponseDir = "./response/";
     public ClientNode(String superNodeHostname, int superNodePort, int p2pPort) throws InterruptedException {
         this.superNodeHostname = superNodeHostname;
         this.superNodePort = superNodePort;
@@ -40,8 +53,8 @@ public class ClientNode {
 
     public void start() {
         try {
-            supernode = new Socket(superNodeHostname, superNodePort);
-
+            this.supernode = new Socket(superNodeHostname, superNodePort);
+            this.p2pServer = new ServerSocket(p2pPort);
             //initiate streams
             this.superNodeOS = new ObjectOutputStream(this.supernode.getOutputStream());
             this.superNodeIS = new ObjectInputStream(this.supernode.getInputStream());
@@ -57,8 +70,9 @@ public class ClientNode {
             //Start UI
             Terminal.debug("Starting the UI");
 
-            if(System.in != null)
-                this.startUI();
+            this.startUI();
+            this.listenP2P();
+
 
         } catch (UnknownHostException ex) {
             System.out.println("Server not found: " + ex.getMessage());
@@ -109,13 +123,13 @@ public class ClientNode {
                 System.out.println();
             }
         } catch (Exception e) {
-
+            System.out.println("RUNNING DOCKER MODE");
         }
 
     }
     
     private void registerFiles()  {
-        File folder = new File("./client/files");
+        File folder = new File(this.baseDir);
         File[] listOfFiles = folder.listFiles();
         
         if(listOfFiles != null)
@@ -161,8 +175,86 @@ public class ClientNode {
     }
 
     private void initiateP2P(List<FileData> files) {
+        Thread[] tpool = new Thread[files.size()];
+        for(int i =0; i < files.size(); i++){
+            FileData file = files.get(i);
+            tpool[i] = new Thread(()->{
+                try {
+                    Socket socket = new Socket(file.getIp(), this.p2pPort);
+                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                    ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream());
+                    objectOutputStream.writeObject(file);
+                    FileDataResponse response = (FileDataResponse) objectInputStream.readObject();
+                    System.out.println("Response from: " +file.getIp()+", "+ response);
+                    writeFile(response);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            });
+            tpool[i].start();
+        }
 
+        for(int i =0; i < tpool.length; i++){
+            try {
+                tpool[i].join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println("Arquivos Recebidos");
     }
+
+    private void writeFile(FileDataResponse response) throws IOException {
+        new File(this.baseResponseDir).mkdirs();
+        FileWriter fileWriter = new FileWriter(this.baseResponseDir + response.getMd5()+"_"+response.getIp()+"_"+response.getName());
+        PrintWriter printWriter = new PrintWriter(fileWriter);
+        printWriter.print(response.getContent());
+        printWriter.close();
+    }
+
+    private void listenP2P(){
+        while (true) {
+            try{
+                Socket client = this.p2pServer.accept();
+                p2pSendResponse(client);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void p2pSendResponse(Socket client) {
+        new Thread(()->{
+            try {
+                ObjectOutputStream objectOutputStream = new ObjectOutputStream(client.getOutputStream());
+                ObjectInputStream objectInputStream = new ObjectInputStream(client.getInputStream());
+                FileData request = (FileData) objectInputStream.readObject();
+                String filePath = this.baseDir + request.getName();
+                String content = getFileContet(filePath);
+                FileDataResponse response = new FileDataResponse(request, content );
+                objectOutputStream.writeObject(response);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    client.close();
+                } catch (IOException e) { }
+            }
+        }).start();
+    }
+
+    private String getFileContet(String filePath) throws IOException {
+        StringBuilder contentBuilder = new StringBuilder();
+        try (Stream<String> lines = Files.lines(Paths.get(filePath), StandardCharsets.UTF_8)) {
+            lines.forEach(s -> contentBuilder.append(s).append("\n"));
+        }
+        return contentBuilder.toString();
+    }
+
 
     private List<FileData> getNetworkFilesBasedOnUserInput(String userInput, List<FileData> filesFromNetwork) {
         String[] tokens = userInput.split(",");
