@@ -1,0 +1,38 @@
+version: '3'
+
+
+services:
+    server1:
+        image: openjdk:8-jre
+        ports:
+        - "1000:1000"
+        - "1001:1001"
+        volumes:
+        - "./Server.jar:/Server.jar"
+        entrypoint: ["java", "-jar", "/Server.jar", "supernode", "1000", "1001"]
+        networks:
+            frontend:
+                ipv4_address: 172.20.0.6
+
+
+
+    server2:
+        image: openjdk:8-jre
+        ports:
+        - "1010:1010"
+        - "1011:1001"
+        volumes:
+        - "./Server.jar:/Server.jar"
+        entrypoint: ["java", "-jar", "/Server.jar", "supernode", "1010", "1001"]
+        networks:
+            frontend:
+                ipv4_address: 172.20.0.7
+
+
+networks:
+  frontend:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+

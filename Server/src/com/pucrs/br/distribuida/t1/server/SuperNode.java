@@ -5,16 +5,19 @@ import com.pucrs.br.distribuida.t1.dto.Super2Client;
 import com.pucrs.br.distribuida.t1.dto.Super2Super;
 import com.pucrs.br.distribuida.t1.entity.FileData;
 import com.pucrs.br.distribuida.t1.entity.Node;
+import com.pucrs.br.distribuida.t1.helper.MD5;
 import com.pucrs.br.distribuida.t1.helper.Terminal;
 
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import com.sun.org.apache.bcel.internal.generic.RETURN;
 import org.jgroups.JChannel;
 import org.jgroups.Message;
 import org.jgroups.ReceiverAdapter;
@@ -24,6 +27,7 @@ import org.jgroups.blocks.RequestOptions;
 import org.jgroups.blocks.ResponseMode;
 import org.jgroups.blocks.RpcDispatcher;
 import org.jgroups.util.RspList;
+import org.jgroups.util.UUID;
 
 
 public class SuperNode extends ReceiverAdapter {
@@ -32,15 +36,13 @@ public class SuperNode extends ReceiverAdapter {
     private byte[] bufferMulticastPublisher;
     private MulticastSocket socket;
 
-    private HashMap<Integer, Node> nodes;
-    private HashMap<Integer, List<FileData>> files;
+    private HashMap<String, Node> nodes;
+    private HashMap<String, List<FileData>> files;
     private int nodeIdEnumerator = 1;
     private JChannel channel;
     private RpcDispatcher dispacherRPC;
 
     public SuperNode(int unicastPort, int multicastPort) throws IOException, Exception {
-        startJChannel("superNodeGroup");
-
         Terminal.debug("Initiating unicast socket with nodes on port '"+unicastPort+"'");
         this.server = new ServerSocket(unicastPort);
 
@@ -54,8 +56,8 @@ public class SuperNode extends ReceiverAdapter {
 
         this.nodes = new HashMap<>();
         this.files = new HashMap<>();
+        startJChannel("superNodeGroup");
 
-        RequestFiles();
     }
 
     private void handleClientNodesRequests() {
@@ -78,7 +80,9 @@ public class SuperNode extends ReceiverAdapter {
     }
 
     private Node getNode(Socket socket) throws IOException {
-        Node node = new Node(this.nodeIdEnumerator++, socket);
+        String id = UUID.randomUUID().toString();
+        System.out.println("new node: " + id );
+        Node node = new Node(id , socket);
 
         this.nodes.put(node.getId(), node);
 
@@ -102,53 +106,42 @@ public class SuperNode extends ReceiverAdapter {
         System.out.println("** view: " + new_view + ", members: " + new_view.size());
     }
 
-    @Override
-    public void receive(Message msg) {
-        try {
-            System.out.println(msg.getSrc() + ": " + msg.getObject());
-        }
-        catch(Exception e) {
-        }
-    }
-
+    /**
+     * Funcao chamada pelo RPC
+     * @return
+     */
     public Super2Super getFiles(){
         return new Super2Super(1,files);
     }
 
-    public String getFiless(){
-        return "HELLO";
-    }
-    private void RequestFiles() throws Exception {
+    private List<HashMap<String, List<FileData>>> requestFiles() throws Exception {
         RequestOptions opts=new RequestOptions(ResponseMode.GET_ALL, 5000);
-        System.out.println(files.getClass());
 
         RspList rsp_list = dispacherRPC.callRemoteMethods(
                 null,
                 new MethodCall("getFiles", new Object[]{}, new Class[]{}),
                 opts);
 
-        System.out.println("RequestFiles " + rsp_list.getResults());
-    }
+        List<HashMap<String, List<FileData>>> mapfd = (List<HashMap<String, List<FileData>>>) rsp_list.getResults()
+                .stream()
+                .map((o) -> (((Super2Super) o).getFilesMap()
 
-//    private void sendJgroupMessage(Object obj){
-//        Message msg = new Message(null, obj).setFlag(Message.Flag.RSVP);
-//        try {
-//            channel.send(msg);
-//        } catch (Exception ex) {
-//            Terminal.debug("sendJgroupMessage Exception: " + ex.getMessage());
-//            Logger.getLogger(SuperNode.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-//    }
+                        )
+                ).collect(Collectors.toList());
+
+
+        return mapfd;
+    }
 
     private void startJChannel(String group) throws Exception {
         channel = new JChannel();
         channel.setReceiver(this);
         channel.connect(group);
         dispacherRPC = new RpcDispatcher(channel, this);
-        //      channel.close();
     }
 
     private void handleClientTimeoutRemoval() {
+        System.out.println("All nodes: "+ nodes);
         try {
             Terminal.debug("timeout removal - get list of expired nodes");
             List<Node> nodes = this.getNodesTimeouted();
@@ -183,9 +176,10 @@ public class SuperNode extends ReceiverAdapter {
 
     private class ClientNodeWorker implements Runnable {
         private Node node;
-        private HashMap<Integer, List<FileData>> superNodeFiles;
+        private HashMap<String, List<FileData>> superNodeFiles;
 
-        public ClientNodeWorker(Node node, HashMap<Integer, List<FileData>> superNodeFiles) {
+        public ClientNodeWorker(Node node, HashMap<String, List<FileData>> superNodeFiles) {
+            System.out.println("New client node worker" + superNodeFiles + "\n" + node);
             this.node = node;
             this.superNodeFiles = superNodeFiles;
         }
@@ -258,13 +252,20 @@ public class SuperNode extends ReceiverAdapter {
 
         private ArrayList<FileData> getListOfNetworkFiles() {
             ArrayList<FileData> list = new ArrayList<>();
-
             //Create a list containing all files in other servers (removing it's own)
-            this.superNodeFiles.forEach((key, files) -> {
-                if (this.node.getId() != key)
-                    list.addAll(files);
-            });
-
+            try {
+                List<HashMap<String, List<FileData>>> result = requestFiles();
+                System.out.println(result);
+                result.forEach(r ->{
+                    r.forEach((key, files) -> {
+                        if (!this.node.getId().equals(key))
+                            list.addAll(files);
+                    });
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            System.out.println(list);
             return list;
         }
 

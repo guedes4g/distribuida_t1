@@ -1,0 +1,35 @@
+version: '3'
+
+
+services:    
+    client1:
+        image: openjdk:8-jre
+        ports:
+        - "5684:5684"
+        volumes:
+        - "./Server.jar:/Server.jar"
+        - "./client/files/:/client/files/"
+        entrypoint: ["java", "-jar", "/Server.jar", "clientnode", "172.20.0.6", "1000", "2001"]
+        networks:
+            frontend:
+                ipv4_address: 172.20.0.3
+
+    client2:
+        image: openjdk:8-jre
+        ports:
+        - "5682:5683"
+        volumes:
+        - "./Server.jar:/Server.jar"
+        - "./client/files/:/client/files/"
+        entrypoint: ["java", "-jar", "/Server.jar", "clientnode", "172.20.0.7", "1010", "2002"]
+        networks:
+            frontend:
+                ipv4_address: 172.20.0.4
+
+networks:
+  frontend:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+

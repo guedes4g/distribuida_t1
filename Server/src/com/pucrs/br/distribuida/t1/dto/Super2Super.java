@@ -1,5 +1,9 @@
 package com.pucrs.br.distribuida.t1.dto;
 
+import com.pucrs.br.distribuida.t1.entity.FileData;
+
+import java.util.HashMap;
+
 /*
     COMMANDS LIST
 
@@ -13,4 +17,7 @@ public class Super2Super extends NodeCommunication {
         super(command, body);
     }
 
+    public HashMap<String,FileData> getFilesMap() {
+        return (HashMap<String,FileData>) this.body;
+    }
 }

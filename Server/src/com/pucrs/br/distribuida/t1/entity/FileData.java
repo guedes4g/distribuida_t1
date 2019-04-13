@@ -39,6 +39,6 @@ public class FileData implements Serializable {
 
     @Override
     public String toString() {
-        return "md5: " + md5 + ", name: " + name + ", ip: " + ip;
+        return "(md5: " + md5 + ", name: " + name + ", ip: " + ip+")";
     }
 }

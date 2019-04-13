@@ -17,9 +17,9 @@ public class Node {
     private ObjectInputStream is;
     private ObjectOutputStream os;
     private long lastPingTime = 0;
-    private int id;
+    private String id;
     
-    public Node(int id, Socket socket) throws IOException {
+    public Node(String id, Socket socket) throws IOException {
         this.id = id;
         this.socket = socket;
 
@@ -29,7 +29,7 @@ public class Node {
         this.updateLastPingTime();
     }
 
-    public int getId() {
+    public String getId() {
         return this.id;
     }
 

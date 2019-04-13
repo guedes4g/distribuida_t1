@@ -24,7 +24,7 @@ public class ClientNode {
 
     private Thread keepAliveThread = null;
 
-    public ClientNode(String superNodeHostname, int superNodePort, int p2pPort) {
+    public ClientNode(String superNodeHostname, int superNodePort, int p2pPort) throws InterruptedException {
         this.superNodeHostname = superNodeHostname;
         this.superNodePort = superNodePort;
         this.p2pPort = p2pPort;
@@ -56,11 +56,9 @@ public class ClientNode {
 
             //Start UI
             Terminal.debug("Starting the UI");
-            this.startUI();
 
-            //Ends connection
-            this.superNodeOS.close();
-            this.supernode.close();
+            if(System.in != null)
+                this.startUI();
 
         } catch (UnknownHostException ex) {
             System.out.println("Server not found: " + ex.getMessage());
@@ -88,26 +86,32 @@ public class ClientNode {
         }
     }
 
-    private void startUI() {
-        while (true) {
+    private void startUI() throws IOException {
+        try {
+            while (true) {
             System.out.println("Hi! What you want to do?");
             System.out.println("[1] get files list from entire network.");
             System.out.println("[98] toggle debug.");
             System.out.println("[99] exit.");
-            
-            switch (Terminal.getInt()) {
-                case 1:
-                    this.getFilesFromSuperNode();
-                    break;
-                case 98:
-                    this.toggleDebug();
-                    break;
-                case 99:
-                    return;
-            }
+                switch (Terminal.getInt()) {
+                    case 1:
+                        this.getFilesFromSuperNode();
+                        break;
+                    case 98:
+                        this.toggleDebug();
+                        break;
+                    case 99:
+                        return;
+                }
 
-            System.out.println();
+                this.superNodeOS.close();
+                this.supernode.close();
+                System.out.println();
+            }
+        } catch (Exception e) {
+
         }
+
     }
     
     private void registerFiles()  {
@@ -118,6 +122,8 @@ public class ClientNode {
             for (File f : listOfFiles)
                 if (f.isFile())
                     this.files.put(MD5.generate(f.getAbsolutePath()), f.getName());
+
+        System.out.println(this.files);
     }
 
     private void getFilesFromSuperNode() {
@@ -189,7 +195,7 @@ public class ClientNode {
         System.out.println("\nHere's the network list of files.");
 
         for (FileData file : filesFromNetwork)
-            System.out.println("["+(iterator++)+"] " + file.getName());
+            System.out.println("["+(iterator++)+"] " + file.getName() + ", MD5: " +file.getMd5() + " host: "+ file.getIp());
     }
 
     private List<FileData> waitForListOfFilesFromNetwork() {
@@ -215,6 +221,7 @@ public class ClientNode {
     
     private void sendRegisteredFiles() {
         this.send(new Client2Super(1, this.files));
+        System.out.println("Sent " + this.files);
     }
 
     private void send(Client2Super obj) {
