@@ -253,7 +253,7 @@ public class ClientNode {
 
     private String getFileContet(String filePath) throws IOException {
         StringBuilder contentBuilder = new StringBuilder();
-        try (Stream<String> lines = Files.lines(Paths.get(filePath), StandardCharsets.UTF_8)) {
+        try (Stream<String> lines = Files.lines(Paths.get(filePath), StandardCharsets.ISO_8859_1)) {
             lines.forEach(s -> contentBuilder.append(s).append("\n"));
         }
         return contentBuilder.toString();
