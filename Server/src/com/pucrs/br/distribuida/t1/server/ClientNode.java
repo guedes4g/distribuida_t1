@@ -58,7 +58,7 @@ public class ClientNode {
             //initiate streams
             this.superNodeOS = new ObjectOutputStream(this.supernode.getOutputStream());
             this.superNodeIS = new ObjectInputStream(this.supernode.getInputStream());
-            
+
             //send the files to super server
             Terminal.debug("Sending files to supernode");
             this.sendRegisteredFiles();

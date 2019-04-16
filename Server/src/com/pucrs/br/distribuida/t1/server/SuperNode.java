@@ -80,7 +80,7 @@ public class SuperNode extends ReceiverAdapter {
 
     private Node getNode(Socket socket) throws IOException {
         String id = UUID.randomUUID().toString();
-        System.out.println("new node: " + id );
+        Terminal.debug("new node: " + id );
         Node node = new Node(id , socket);
 
         this.nodes.put(node.getId(), node);
@@ -102,7 +102,7 @@ public class SuperNode extends ReceiverAdapter {
 
     @Override
     public void viewAccepted(View new_view) {
-        System.out.println("** view: " + new_view + ", members: " + new_view.size());
+        Terminal.debug("** view: " + new_view + ", members: " + new_view.size());
     }
 
     /**
@@ -140,7 +140,7 @@ public class SuperNode extends ReceiverAdapter {
     }
 
     private void handleClientTimeoutRemoval() {
-        System.out.println("All nodes: "+ nodes);
+        Terminal.debug("All nodes: "+ nodes);
         try {
             Terminal.debug("timeout removal - get list of expired nodes");
             List<Node> nodes = this.getNodesTimeouted();
@@ -178,7 +178,7 @@ public class SuperNode extends ReceiverAdapter {
         private HashMap<String, List<FileData>> superNodeFiles;
 
         public ClientNodeWorker(Node node, HashMap<String, List<FileData>> superNodeFiles) {
-            System.out.println("New client node worker" + superNodeFiles + "\n" + node);
+            Terminal.debug("New client node worker" + superNodeFiles + "\n" + node);
             this.node = node;
             this.superNodeFiles = superNodeFiles;
         }
@@ -254,7 +254,7 @@ public class SuperNode extends ReceiverAdapter {
             //Create a list containing all files in other servers (removing it's own)
             try {
                 List<HashMap<String, List<FileData>>> result = requestFiles();
-                System.out.println(result);
+                Terminal.debug(result);
                 result.forEach(r ->{
                     r.forEach((key, files) -> {
                         if (!this.node.getId().equals(key))
@@ -264,7 +264,7 @@ public class SuperNode extends ReceiverAdapter {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            System.out.println(list);
+            Terminal.debug(list);
             return list;
         }
 
