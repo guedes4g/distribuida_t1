@@ -35,7 +35,7 @@ public class ClientNode {
     private Thread keepAliveThread = null;
     private ClientNode clientNode;
 
-    private String baseDir = "./client/files/";
+    private String baseDir = "./Server/client/files/";
     private String baseResponseDir = "./response/";
     public ClientNode(String superNodeHostname, int superNodePort, int p2pPort) throws InterruptedException {
         this.superNodeHostname = superNodeHostname;
@@ -67,11 +67,12 @@ public class ClientNode {
             Terminal.debug("Initiating keep alive process");
             this.keepAliveThread.start();
 
+            Terminal.debug("Starting the P2P");
+            this.listenP2P();
+
             //Start UI
             Terminal.debug("Starting the UI");
-
             this.startUI();
-            this.listenP2P();
 
 
         } catch (UnknownHostException ex) {
@@ -103,10 +104,11 @@ public class ClientNode {
     private void startUI() throws IOException {
         try {
             while (true) {
-            System.out.println("Hi! What you want to do?");
-            System.out.println("[1] get files list from entire network.");
-            System.out.println("[98] toggle debug.");
-            System.out.println("[99] exit.");
+                System.out.println("Hi! What you want to do?");
+                System.out.println("[1] get files list from entire network.");
+                System.out.println("[98] toggle debug.");
+                System.out.println("[99] exit.");
+
                 switch (Terminal.getInt()) {
                     case 1:
                         this.getFilesFromSuperNode();
@@ -115,15 +117,15 @@ public class ClientNode {
                         this.toggleDebug();
                         break;
                     case 99:
+                        this.superNodeOS.close();
+                        this.supernode.close();
                         return;
                 }
 
-                this.superNodeOS.close();
-                this.supernode.close();
                 System.out.println();
             }
         } catch (Exception e) {
-            System.out.println("RUNNING DOCKER MODE");
+            Terminal.debug(e.getMessage());
         }
 
     }
@@ -145,7 +147,7 @@ public class ClientNode {
         Terminal.debug("Asking to superNode the list of files in network.");
         this.send(new Client2Super(3, null));
 
-        Terminal.debug("Waiting for supeNode return the list of files in network.");
+        Terminal.debug("Waiting for superNode return the list of files in network.");
         List<FileData> filesFromNetwork = this.waitForListOfFilesFromNetwork();
 
         if (filesFromNetwork != null) {
@@ -215,14 +217,16 @@ public class ClientNode {
     }
 
     private void listenP2P(){
-        while (true) {
-            try{
-                Socket client = this.p2pServer.accept();
-                p2pSendResponse(client);
-            } catch (IOException e) {
-                e.printStackTrace();
+        new Thread(() -> {
+            while (true) {
+                try{
+                    Socket client = this.p2pServer.accept();
+                    p2pSendResponse(client);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-        }
+        }).start();
     }
 
     private void p2pSendResponse(Socket client) {
